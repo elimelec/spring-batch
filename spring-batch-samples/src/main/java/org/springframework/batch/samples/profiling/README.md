@@ -2,6 +2,8 @@
 
 This sample provides a comprehensive framework for profiling Spring Batch performance with massive datasets. Perfect for identifying performance bottlenecks, testing JVM optimizations, and analyzing batch processing behavior under load.
 
+**NEW**: Now supports configurable storage backends including in-memory, HSQLDB, MySQL, PostgreSQL, and file-based storage!
+
 ## Project Overview
 
 ### Architecture
@@ -100,6 +102,11 @@ Testing CRYPTO...
 | `profiling.thread.count` | 4 | Number of threads for multi-threaded execution |
 | `profiling.partition.count` | 8 | Number of partitions for partitioned execution |
 | `profiling.workload.type` | MODERATE | Processing complexity (see below) |
+| `profiling.storage.type` | BLACKHOLE | Storage backend (see below) |
+| `profiling.jdbc.url` | - | JDBC URL for database storage |
+| `profiling.jdbc.username` | - | Database username |
+| `profiling.jdbc.password` | - | Database password |
+| `profiling.table.name` | data_record | Target table name |
 | `profiling.verbose` | false | Enable detailed chunk-level logging |
 
 ### Workload Types
@@ -111,6 +118,15 @@ Testing CRYPTO...
 - **MEMORY**: Memory allocation intensive - ~9K items/sec
 - **CRYPTO**: Cryptographic operations (SHA-256) - ~29K items/sec
 
+### Storage Types
+
+- **BLACKHOLE**: No storage, metrics only (default) - Fastest, no I/O
+- **MEMORY**: In-memory ConcurrentLinkedQueue - Fast, limited by heap
+- **HSQLDB**: Embedded HSQLDB database - Good for testing
+- **MYSQL**: MySQL database - Production-like performance
+- **POSTGRES**: PostgreSQL database - Production-like performance
+- **FILE**: CSV file output - I/O bound testing
+
 ## Common Launch Configurations
 
 ### Small Dataset (Quick Test)
@@ -118,6 +134,46 @@ Testing CRYPTO...
 # 1,000 records - runs in ~50ms
 ../mvnw test -Dtest=SimpleProfilingTest#testMassiveDataProcessing \
   -Dprofiling.total.records=1000
+```
+
+### Test with Different Storage Types
+```bash
+# In-memory storage
+../mvnw test -Dtest=SimpleProfilingTest#testMassiveDataProcessing \
+  -Dprofiling.total.records=10000 \
+  -Dprofiling.storage.type=MEMORY
+
+# HSQLDB embedded database
+../mvnw test -Dtest=SimpleProfilingTest#testMassiveDataProcessing \
+  -Dprofiling.total.records=10000 \
+  -Dprofiling.storage.type=HSQLDB
+
+# MySQL (requires running MySQL instance)
+../mvnw test -Dtest=SimpleProfilingTest#testMassiveDataProcessing \
+  -Dprofiling.total.records=10000 \
+  -Dprofiling.storage.type=MYSQL \
+  -Dprofiling.jdbc.url="jdbc:mysql://localhost:3306/testdb" \
+  -Dprofiling.jdbc.username=root \
+  -Dprofiling.jdbc.password=password
+
+# PostgreSQL (requires running PostgreSQL instance)
+../mvnw test -Dtest=SimpleProfilingTest#testMassiveDataProcessing \
+  -Dprofiling.total.records=10000 \
+  -Dprofiling.storage.type=POSTGRES \
+  -Dprofiling.jdbc.url="jdbc:postgresql://localhost:5432/testdb" \
+  -Dprofiling.jdbc.username=postgres \
+  -Dprofiling.jdbc.password=password
+
+# File output
+../mvnw test -Dtest=SimpleProfilingTest#testMassiveDataProcessing \
+  -Dprofiling.total.records=10000 \
+  -Dprofiling.storage.type=FILE
+```
+
+### Compare Storage Performance
+```bash
+# Run the storage comparison test
+../mvnw test -Dtest=SimpleProfilingTest#compareStorageTypes -q
 ```
 
 ### Medium Dataset (Development)
