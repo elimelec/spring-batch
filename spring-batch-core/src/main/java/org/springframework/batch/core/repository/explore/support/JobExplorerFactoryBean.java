@@ -21,6 +21,9 @@ import java.nio.charset.StandardCharsets;
 
 import javax.sql.DataSource;
 
+import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.batch.core.converter.ConversionServiceFactory;
 import org.springframework.batch.core.job.DefaultJobKeyGenerator;
 
@@ -38,12 +41,14 @@ import org.springframework.batch.core.repository.dao.JobInstanceDao;
 import org.springframework.batch.core.repository.dao.StepExecutionDao;
 import org.springframework.batch.core.repository.support.JdbcJobRepositoryFactoryBean;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.support.DatabaseType;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.jdbc.support.incrementer.AbstractDataFieldMaxValueIncrementer;
 import org.springframework.jdbc.support.incrementer.DataFieldMaxValueIncrementer;
 import org.springframework.util.Assert;
@@ -186,7 +191,15 @@ public class JobExplorerFactoryBean extends AbstractJobExplorerFactoryBean imple
 
 	@Override
 	protected JobInstanceDao createJobInstanceDao() {
-		JdbcJobInstanceDao dao = new JdbcJobInstanceDao(JdbcClient.create(jdbcOperations));
+		@Nullable String databaseType = null;
+		try {
+			databaseType = DatabaseType.fromMetaData(this.dataSource).name();
+		}
+		catch (MetaDataAccessException | IllegalArgumentException ex) {
+			LogFactory.getLog(getClass())
+				.debug("Using portable job instance pagination: database type unavailable", ex);
+		}
+		JdbcJobInstanceDao dao = new JdbcJobInstanceDao(JdbcClient.create(jdbcOperations), databaseType);
 		dao.setJobInstanceIncrementer(incrementer);
 		dao.setJobKeyGenerator(jobKeyGenerator);
 		dao.setTablePrefix(tablePrefix);
