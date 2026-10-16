@@ -38,7 +38,7 @@ final class JdbcOffsetPagination {
 			case "H2", "HSQL", "DERBY", "SQLSERVER", "DB2" -> query + " OFFSET :start ROWS FETCH NEXT :count ROWS ONLY";
 			case "POSTGRES", "MYSQL", "MARIADB", "SQLITE" -> query + " LIMIT :count OFFSET :start";
 			case "ORACLE" -> """
-					SELECT JOB_INSTANCE_ID, JOB_NAME FROM (
+					SELECT * FROM (
 						SELECT PAGE_.*, ROWNUM AS PAGE_ROW_NUMBER FROM (
 							%s
 						) PAGE_ WHERE ROWNUM <= :start + :count

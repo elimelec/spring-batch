@@ -182,6 +182,9 @@ class JdbcJobInstanceDaoPaginationTests {
 		for (String type : List.of("POSTGRES", "MYSQL", "MARIADB", "SQLITE", "postgres")) {
 			assertEquals(query + " LIMIT :count OFFSET :start", JdbcOffsetPagination.queryFor(query, type));
 		}
+		String oracle = JdbcOffsetPagination.queryFor("SELECT A, B FROM T ORDER BY A", "ORACLE");
+		assertTrue(oracle.startsWith("SELECT * FROM ("));
+		assertTrue(oracle.contains("SELECT A, B FROM T ORDER BY A"));
 		for (DatabaseType type : DatabaseType.values()) {
 			if (!List.of("H2", "HSQL", "DERBY", "SQLSERVER", "DB2", "POSTGRES", "MYSQL", "MARIADB", "SQLITE", "ORACLE")
 				.contains(type.name())) {

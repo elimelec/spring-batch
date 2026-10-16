@@ -228,7 +228,6 @@ public class JdbcJobInstanceDao extends AbstractJdbcBatchMetadataDao implements 
 			return new ArrayList<>();
 		}
 
-		String query = getQuery(FIND_LAST_JOBS_BY_NAME);
 		if (this.paginationQuery != null && start >= 0 && count > 0) {
 			return getJdbcClient().sql(getQuery(this.paginationQuery))
 				.param("jobName", jobName)
@@ -261,7 +260,7 @@ public class JdbcJobInstanceDao extends AbstractJdbcBatchMetadataDao implements 
 
 		};
 
-		return getJdbcClient().sql(query).param("jobName", jobName).query(extractor);
+		return getJdbcClient().sql(getQuery(FIND_LAST_JOBS_BY_NAME)).param("jobName", jobName).query(extractor);
 	}
 
 	/**

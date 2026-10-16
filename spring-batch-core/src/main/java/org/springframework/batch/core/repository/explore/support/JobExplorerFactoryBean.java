@@ -71,6 +71,8 @@ public class JobExplorerFactoryBean extends AbstractJobExplorerFactoryBean imple
 
 	protected JdbcOperations jdbcOperations;
 
+	private @Nullable String databaseType;
+
 	protected String tablePrefix = AbstractJdbcBatchMetadataDao.DEFAULT_TABLE_PREFIX;
 
 	protected final DataFieldMaxValueIncrementer incrementer = new AbstractDataFieldMaxValueIncrementer() {
@@ -169,6 +171,14 @@ public class JobExplorerFactoryBean extends AbstractJobExplorerFactoryBean imple
 			jdbcOperations = new JdbcTemplate(dataSource);
 		}
 
+		try {
+			databaseType = DatabaseType.fromMetaData(dataSource).name();
+		}
+		catch (MetaDataAccessException | IllegalArgumentException ex) {
+			LogFactory.getLog(getClass())
+				.debug("Using portable job instance pagination: database type unavailable", ex);
+		}
+
 		if (jobKeyGenerator == null) {
 			jobKeyGenerator = new DefaultJobKeyGenerator();
 		}
@@ -191,14 +201,6 @@ public class JobExplorerFactoryBean extends AbstractJobExplorerFactoryBean imple
 
 	@Override
 	protected JobInstanceDao createJobInstanceDao() {
-		@Nullable String databaseType = null;
-		try {
-			databaseType = DatabaseType.fromMetaData(this.dataSource).name();
-		}
-		catch (MetaDataAccessException | IllegalArgumentException ex) {
-			LogFactory.getLog(getClass())
-				.debug("Using portable job instance pagination: database type unavailable", ex);
-		}
 		JdbcJobInstanceDao dao = new JdbcJobInstanceDao(JdbcClient.create(jdbcOperations), databaseType);
 		dao.setJobInstanceIncrementer(incrementer);
 		dao.setJobKeyGenerator(jobKeyGenerator);
