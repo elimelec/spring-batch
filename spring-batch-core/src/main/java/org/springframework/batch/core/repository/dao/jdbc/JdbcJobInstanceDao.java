@@ -138,6 +138,8 @@ public class JdbcJobInstanceDao extends AbstractJdbcBatchMetadataDao implements 
 
 	private JobKeyGenerator jobKeyGenerator = new DefaultJobKeyGenerator();
 
+	private final @Nullable String paginationQuery;
+
 	/**
 	 * In this JDBC implementation a job instance id is obtained by asking the
 	 * jobInstanceIncrementer (which is likely a sequence) for the next long value, and
@@ -219,6 +221,22 @@ public class JdbcJobInstanceDao extends AbstractJdbcBatchMetadataDao implements 
 	@Override
 	public List<JobInstance> getJobInstances(String jobName, final int start, final int count) {
 
+		if (jobName.contains(STAR_WILDCARD)) {
+			jobName = jobName.replaceAll("\\" + STAR_WILDCARD, SQL_WILDCARD);
+		}
+		if (count == 0) {
+			return new ArrayList<>();
+		}
+
+		if (this.paginationQuery != null && start >= 0 && count > 0) {
+			return getJdbcClient().sql(getQuery(this.paginationQuery))
+				.param("jobName", jobName)
+				.param("start", start)
+				.param("count", count)
+				.query(new JobInstanceRowMapper())
+				.list();
+		}
+
 		ResultSetExtractor<List<JobInstance>> extractor = new ResultSetExtractor<>() {
 
 			private final List<JobInstance> list = new ArrayList<>();
@@ -226,10 +244,13 @@ public class JdbcJobInstanceDao extends AbstractJdbcBatchMetadataDao implements 
 			@Override
 			public List<JobInstance> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				int rowNum = 0;
-				while (rowNum < start && rs.next()) {
+				while (rowNum < start) {
+					if (!rs.next()) {
+						return list;
+					}
 					rowNum++;
 				}
-				while (rowNum < start + count && rs.next()) {
+				while (rowNum < (long) start + count && rs.next()) {
 					RowMapper<JobInstance> rowMapper = new JobInstanceRowMapper();
 					list.add(rowMapper.mapRow(rs, rowNum));
 					rowNum++;
@@ -238,10 +259,6 @@ public class JdbcJobInstanceDao extends AbstractJdbcBatchMetadataDao implements 
 			}
 
 		};
-
-		if (jobName.contains(STAR_WILDCARD)) {
-			jobName = jobName.replaceAll("\\" + STAR_WILDCARD, SQL_WILDCARD);
-		}
 
 		return getJdbcClient().sql(getQuery(FIND_LAST_JOBS_BY_NAME)).param("jobName", jobName).query(extractor);
 	}
@@ -334,7 +351,18 @@ public class JdbcJobInstanceDao extends AbstractJdbcBatchMetadataDao implements 
 	 * @since 6.1
 	 */
 	public JdbcJobInstanceDao(JdbcClient jdbcClient) {
+		this(jdbcClient, null);
+	}
+
+	/**
+	 * Create a DAO with native offset pagination when supported by the database type.
+	 * @param jdbcClient the client used to query batch metadata
+	 * @param databaseType a DatabaseType name, or null for portable pagination
+	 * @since 6.1
+	 */
+	public JdbcJobInstanceDao(JdbcClient jdbcClient, @Nullable String databaseType) {
 		super(jdbcClient);
+		this.paginationQuery = JdbcOffsetPagination.queryFor(FIND_LAST_JOBS_BY_NAME, databaseType);
 	}
 
 	/**

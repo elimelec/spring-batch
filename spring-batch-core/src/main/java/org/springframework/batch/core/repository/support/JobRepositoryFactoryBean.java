@@ -307,7 +307,7 @@ public class JobRepositoryFactoryBean extends AbstractJobRepositoryFactoryBean i
 
 	@Override
 	protected JdbcJobInstanceDao createJobInstanceDao() {
-		JdbcJobInstanceDao dao = new JdbcJobInstanceDao(JdbcClient.create(jdbcOperations));
+		JdbcJobInstanceDao dao = new JdbcJobInstanceDao(JdbcClient.create(jdbcOperations), this.databaseType);
 		String legacySchema = "false";
 		if (System.getenv(SPRING_BATCH_JDBC_SCHEMA_LEGACY) != null) {
 			legacySchema = System.getenv(SPRING_BATCH_JDBC_SCHEMA_LEGACY);
